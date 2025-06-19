@@ -1,0 +1,189 @@
+#!/usr/bin/env python3
+### For solving a general psd linear system
+### Running on a single set of parameters (dataset, block size, approximation rank)
+### Allows for parallelization over the number of samples to average over the RCD trajectories
+
+import numpy as np
+import test_helper
+import argparse
+
+import sys
+import os
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+sys.path.append(os.path.abspath(os.path.join(script_dir, "..", "RPCholesky")))
+from rpcholesky import rpcholesky
+
+#################### Inputs ####################
+
+### Locations for input data and saving output data/figures
+script_dir = os.path.dirname(os.path.abspath(__file__))
+data_loc = os.path.join(script_dir, "..", "data") + os.sep
+out_loc = "./output/"
+
+selected_dataset = "simlowrank400"
+
+n = 2**13                  # size of input matrix 
+r = 500                    # approximate rank of input matrix (if simulated)
+d = 500                    # approximation rank for RPCholesky
+l = 500                    # block size for coordinate descent
+method = "direct"          # method for solving inner projection for block CD in ["direct", "cg"]
+n_iter_cd = 5000           # number of CD iterations
+n_iter_cg = 300            # number of CG iterations
+rel_rnorm_tol = -1         # terminate if relative residual norm falls below threshold
+save_data = True
+
+n_samples = 100            # number of samples to average over
+
+# rng = np.random.default_rng()
+rng = np.random.default_rng(seed=123)
+
+#################### Define functions ####################
+
+def run_test_psd(
+    dataset_loc,    # dataset location and file name (preprocessed .mat file)
+    dataset_id,     # string to identify dataset
+    n = n,
+    d = d,
+    l = l,
+    method = method,
+    n_iter_cd = n_iter_cd,
+    n_iter_cg = n_iter_cg,
+    rel_rnorm_tol = rel_rnorm_tol,
+    save_data = save_data,
+    out_loc = out_loc,
+    n_samples = n_samples,
+    sample_num = 1,
+    rng = rng,
+):
+    print("========================================")
+    if n_samples > 1:
+        print(f"Loading dataset {dataset_id} (d = {d}, l = {l}), sample_num = {sample_num}...")
+    else:
+        print(f"Loading dataset {dataset_id} (d = {d}, l = {l})...")
+    
+    A, b = test_helper.load_data_psd(dataset_loc=dataset_loc, rng=rng)
+    n = A.shape[0]
+    
+    print(f"Dataset {dataset_id} loaded (n = {n}).")
+
+    print("========================================")
+    print(f"Running RPCholesky: d = {d}...")
+
+    ### Compute low-rank approximations
+    # Use the same random approximation in each sample
+    Ahat = rpcholesky(A, d, rng=rng, b=int(np.ceil(d / 10)))  # default: b = "auto" (outcome is random)
+    I = Ahat.get_indices()
+    F = Ahat.get_left_factor()
+
+    print("RPCholesky completed.")
+
+    ### Run solvers
+    print("========================================")
+    print(f"Running solvers: l = {l}...")
+    
+    # SCRCD (diagonal sampling)
+    A_scrcd, A_scrcd_plotdata = test_helper.run_scrcd(A, b, l=l, I=I, F=F, x_init=None, uniform=False, n_iter=n_iter_cd, method=method, rel_rnorm_tol=rel_rnorm_tol)
+    
+    # SCRCD (uniform sampling)
+    A_scrcd2, A_scrcd2_plotdata = test_helper.run_scrcd(A, b, l=l, I=I, F=F, x_init=A_scrcd.x_init, uniform=True, n_iter=n_iter_cd, method=method, rel_rnorm_tol=rel_rnorm_tol)
+    
+    # RCD (diagonal sampling)
+    A_rcd, A_rcd_plotdata = test_helper.run_scrcd(A, b, l=l, I=None, F=None, x_init=A_scrcd.x_init, uniform=False, n_iter=n_iter_cd, method=method, rel_rnorm_tol=rel_rnorm_tol)
+
+    # CG
+    A_cg, A_cg_plotdata = test_helper.run_pcg(A, b, F=None, lamb=None, x_init=A_scrcd.x_init, n_iter=n_iter_cg, rel_rnorm_tol=rel_rnorm_tol)
+
+    # CD++
+    A_cdpp, A_cdpp_plotdata = test_helper.run_cdpp(A, b, l=l, x_init=A_scrcd.x_init, n_iter=n_iter_cd)
+
+    plotdata_list = [
+        {"data": A_scrcd_plotdata,
+        "label": "SCRCD (diagonal)",
+        "id": "SCRCD"},
+        {"data": A_scrcd2_plotdata,
+        "label": "SCRCD (uniform)",
+        "id": "SCRCD2"},
+        {"data": A_rcd_plotdata,
+        "label": "RCD",
+        "id": "RCD"},
+        {"data": A_cdpp_plotdata,
+        "label": "CDPP",
+        "id": "CDPP"},
+        {"data": A_cg_plotdata,
+        "label": "CG",
+        "id": "CG"}
+    ]
+
+    ### Save data
+    if save_data:
+        print("========================================")
+        print(f"Saving data to {out_loc + dataset_id}...")
+        for plotdata in plotdata_list:
+            if n_samples > 1:
+                plotdata["data"].to_csv(f"{out_loc + dataset_id}_{plotdata['id']}_{sample_num}.csv", index=False)
+            else:
+                plotdata["data"].to_csv(f"{out_loc + dataset_id}_{plotdata['id']}.csv", index=False)
+        print("Data saved.")
+
+    print("========================================")
+    print(f"Dataset {dataset_id} completed (n = {n}, d = {d}, l = {l}).")
+
+def generate_psd_dataset(dataset_loc, n, r, nu=1.5):
+    # Generate low-rank psd dataset: given eigenvalue spectrum, resulting matrix is generated by a random rotation on both sides
+    # The first r eigenvalues are equal to one, and the eigenvalues decay with rate i^(-nu) afterwards
+
+    print("========================================")
+    print(f"Simulating dataset {dataset_loc} (n = {n}, r = {r}).")
+
+    indices = np.arange(1, n+1, dtype=float)
+    eigvals = np.array([(i-r+1)**(-nu) if i >= r else 1 for i in indices])
+    test_helper.simulate_psd_data(dataset_loc, n=n, eigvals=eigvals)
+
+    print("========================================")
+    print(f"Dataset {dataset_loc} generated.")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+
+    # Positional (required) arguments
+    parser.add_argument("job_idx", type=int, help="Index of current job (sample number)")
+
+    # Optional arguments
+    parser.add_argument("--selected_dataset", type=str, default=selected_dataset, help="Selected dataset")
+    parser.add_argument("--n", type=int, default=n, help="Size of input matrix")
+    parser.add_argument("--r", type=int, default=r, help="Approximate rank of input matrix (if simulated)")
+    parser.add_argument("--d", type=int, default=d, help="Approximation rank for RPCholesky")
+    parser.add_argument("--l", type=int, default=l, help="Block size for coordinate descent")
+    parser.add_argument("--method", type=str, default=method, help="Method for solving inner projection for block CD")
+    parser.add_argument("--n_iter_cd", type=int, default=n_iter_cd, help="Number of CD iterations")
+    parser.add_argument("--n_iter_cg", type=int, default=n_iter_cg, help="Number of CG iterations")
+    parser.add_argument("--rel_rnorm_tol", type=float, default=rel_rnorm_tol, help="Terminate if relative residual norm (wrt initial iterate) falls below threshold")
+    parser.add_argument("--n_samples", type=int, default=n_samples, help="Number of samples to average over")
+    
+    parser.add_argument("--simulate_dataset", action="store_true", help="Generates simulated dataset if specified, otherwise loads previously saved dataset")
+
+    args = parser.parse_args()
+
+    # Generate new simulated dataset
+    if args.simulate_dataset:
+        dataset_loc = data_loc + args.selected_dataset + ".mat"
+        generate_psd_dataset(dataset_loc, args.n, args.r)
+
+    # Load from existing dataset
+    else:
+        dataset_loc = data_loc + test_helper.datasets_psd[args.selected_dataset]
+    
+    run_test_psd(
+        dataset_loc = dataset_loc,
+        dataset_id = args.selected_dataset,
+        n = args.n,
+        d = args.d,
+        l = args.l,
+        method = args.method,
+        n_iter_cd = args.n_iter_cd,
+        n_iter_cg = args.n_iter_cg,
+        rel_rnorm_tol = args.rel_rnorm_tol,
+        n_samples = args.n_samples,
+        sample_num = args.job_idx
+    )

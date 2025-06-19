@@ -1,0 +1,15 @@
+__pycache__/
+.DS_Store
+*.code_workspace
+data/*
+!data/download_data.py
+!data/raw/
+data/raw/*
+!data/raw/.gitkeep
+!data/preprocessed/
+data/preprocessed/*
+!data/preprocessed/.gitkeep
+**/figures/*
+!**/figures/.gitkeep
+**/output/*
+!**/output/.gitkeep
