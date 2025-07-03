@@ -13,3 +13,4 @@ data/preprocessed/*
 !**/figures/.gitkeep
 **/output/*
 !**/output/.gitkeep
+experiments/zz\ archived/

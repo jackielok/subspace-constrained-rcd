@@ -306,8 +306,90 @@ def run_cdpp(A, b, l, x_init=None, n_iter=1000, rng=None):
     K_cdpp = CDPP(A, b, x=x_init, l=l)
     K_cdpp.update_times = update_times
     K_cdpp.rnorms = X_cdpp_rnorms
-    K_cdpp.rnorms_iters = range(len(X_cdpp_rnorms))
+    K_cdpp.rnorms_iters = list(range(len(X_cdpp_rnorms)))
 
     K_cdpp_plotdata = plot_helper.output_plotdata(K_cdpp)
 
     return K_cdpp, K_cdpp_plotdata
+
+def run_minres(A, b, x_init=None, n_iter=None, rtol=1e-16):
+    ### Runs test for MINRES (scipy implementation)
+    update_times = [0]
+    rnorms = [np.linalg.norm(A @ x_init - b)] if x_init is not None else [np.linalg.norm(b)]
+
+    def callback(xk):
+        nonlocal ts, update_times, rnorms
+        te = timer()
+        update_times.append(te - ts)
+        rnorms.append(np.linalg.norm(A @ xk - b))
+        ts = timer()
+
+    print("========================================")
+    print(f"Running MINRES...")
+
+    ts = timer()
+    x, _ = sp.sparse.linalg.minres(A.matrix, b, x0=x_init, rtol=rtol, maxiter=n_iter, callback=callback)
+
+    print(f"MINRES completed; relative residual norm = {rnorms[-1] / rnorms[0]}")
+    print("========================================")
+
+    class MINRES():
+        def __init__(self, A, b, x=None, **kwargs):
+            self.A = A
+            self.b = b
+            self.n = A.shape[0]
+            self.x_init = x.copy() if x is not None else np.zeros(self.n)
+            self.l = self.n
+            self.update_times = []
+            self.rnorms = []
+            self.rnorms_iters = []
+
+    K_minres = MINRES(A, b, x=x_init)
+    K_minres.update_times = update_times
+    K_minres.rnorms = rnorms
+    K_minres.rnorms_iters = list(range(len(rnorms)))
+
+    K_minres_plotdata = plot_helper.output_plotdata(K_minres)
+
+    return K_minres, K_minres_plotdata
+
+def run_gmres(A, b, x_init=None, n_iter=None, rtol=1e-16):
+    ### Runs test for GMRES (scipy implementation)
+    update_times = [0]
+    rnorms = [np.linalg.norm(A @ x_init - b)] if x_init is not None else [np.linalg.norm(b)]
+
+    def callback(pr_norm):
+        nonlocal ts, update_times, rnorms
+        te = timer()
+        update_times.append(te - ts)
+        rnorms.append(pr_norm)
+        ts = timer()
+
+    print("========================================")
+    print(f"Running GMRES...")
+
+    ts = timer()
+    x, _ = sp.sparse.linalg.gmres(A.matrix, b, x0=x_init, rtol=rtol, restart=A.shape[0], maxiter=n_iter, callback=callback, callback_type="legacy")
+
+    print(f"GMRES completed; relative residual norm = {rnorms[-1] / rnorms[0]}")
+    print("========================================")
+
+    class GMRES():
+        def __init__(self, A, b, x=None, **kwargs):
+            self.A = A
+            self.b = b
+            self.n = A.shape[0]
+            self.x_init = x.copy() if x is not None else np.zeros(self.n)
+            self.l = self.n
+            self.update_times = []
+            self.rnorms = []
+            self.rnorms_iters = []
+
+    K_gmres = GMRES(A, b, x=x_init)
+    K_gmres.update_times = update_times
+    K_gmres.rnorms = rnorms
+    K_gmres.rnorms_iters = list(range(len(rnorms)))
+
+    K_gmres_plotdata = plot_helper.output_plotdata(K_gmres)
+
+    return K_gmres, K_gmres_plotdata

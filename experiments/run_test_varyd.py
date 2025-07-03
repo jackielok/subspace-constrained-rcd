@@ -77,13 +77,14 @@ def run_test_varyd(
     print(f"Running RPCholesky: d = {d}...")
 
     ### Compute low-rank approximations
+    # Use a different random approximation in each sample
     # Low rank approximation for regularized kernel
-    Khat = rpcholesky(K + D, d, rng=rng)
+    Khat = rpcholesky(K + D, d, rng=None, b=int(np.ceil(d / 10)))  # default: b = "auto" (outcome is random)
     I = Khat.get_indices()
     F = Khat.get_left_factor()
 
     # Low rank approximation for kernel only (for CG preconditioner)
-    Khat2 = rpcholesky(K, d, rng=rng)
+    Khat2 = rpcholesky(K, d, rng=None, b=int(np.ceil(d / 10)))  # default: b = "auto" (outcome is random)
     I2 = Khat2.get_indices()
     F2 = Khat2.get_left_factor()
 
@@ -168,7 +169,8 @@ if __name__ == "__main__":
         lamb = args.lamb,
         method = args.method,
         rel_rnorm_tol = args.rel_rnorm_tol,
-        n_iter_cd = n_iter_cd,
+        n_iter_cd = args.n_iter_cd,
+        n_iter_cg = args.n_iter_cg,
         n_samples = args.n_samples,
         sample_num = args.job_idx
     )

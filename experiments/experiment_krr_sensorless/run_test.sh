@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-samples_indices=($(seq 0 99))
-
 selected_dataset="sensorless"
+
 n_samples="100"
+samples_indices=($(seq 0 99))
 
 n="20000"
 l="1000"

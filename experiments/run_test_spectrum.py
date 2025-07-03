@@ -90,13 +90,17 @@ def run_test_spectrum(
         KD[range(n), range(n)] += lamb
 
         # Original matrix
-        KD_evals = sp.sparse.linalg.eigsh(KD, k=top_eigvals, which="LM", return_eigenvectors=False)[::-1]
-        # KD_evals = sp.linalg.eigh(KD, eigvals_only=True, subset_by_index=[n-top_eigvals, n-1])[::-1]
+        if top_eigvals < n:
+            KD_evals = sp.sparse.linalg.eigsh(KD, k=top_eigvals, which="LM", return_eigenvectors=False)[::-1]
+        else:
+            KD_evals = sp.linalg.eigh(KD, eigvals_only=True)[::-1]
 
         # Residual matrix (SCRCD)
         KDres = KD - F @ F.T
-        KDres_evals = sp.sparse.linalg.eigsh(KDres, k=top_eigvals, which="LM", return_eigenvectors=False)[::-1]
-        # KDres_evals = sp.linalg.eigh(KDres, eigvals_only=True, subset_by_index=[n-top_eigvals, n-1])
+        if top_eigvals < n:
+            KDres_evals = sp.sparse.linalg.eigsh(KDres, k=top_eigvals, which="LM", return_eigenvectors=False)[::-1]
+        else:
+            KDres_evals = sp.linalg.eigh(KDres, eigvals_only=True)
         # Filter eigenvalues that are zero up to machine tolerance
         KDres_evals[KDres_evals < 100 * np.finfo(float).eps] = 0
         KDres_evals = KDres_evals[::-1]
@@ -108,8 +112,10 @@ def run_test_spectrum(
         KDprec = U @ (tmp[:,None] * (U.T @ KD)) + (KD / sqrtlamb)  # left multiply
         KDprec = (U @ (tmp[:,None] * (U.T @ KDprec.T)) + (KDprec.T / sqrtlamb)).T  # right multiply
         KDprec = lamb * KDprec
-        KDprec_evals = sp.sparse.linalg.eigsh(KDprec, k=top_eigvals, which="LM", return_eigenvectors=False)[::-1]
-        # KDprec_evals = sp.linalg.eigh(KDprec, eigvals_only=True, subset_by_index=[n-top_eigvals, n-1])[::-1]
+        if top_eigvals < n:
+            KDprec_evals = sp.sparse.linalg.eigsh(KDprec, k=top_eigvals, which="LM", return_eigenvectors=False)[::-1]
+        else:
+            KDprec_evals = sp.linalg.eigh(KDprec, eigvals_only=True)[::-1]
 
     else:
         ### Compute using operator A

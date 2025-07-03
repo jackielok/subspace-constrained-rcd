@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-job_indices=($(seq 0 0))
-
 selected_datasets="lhc"
 selected_datasets_arr=($selected_datasets)
+
+job_indices=($(seq 0 0))
 
 n="100000"
 d="1000"

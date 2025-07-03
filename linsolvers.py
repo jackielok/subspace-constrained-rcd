@@ -175,7 +175,8 @@ class PCG():
         qs = self.A.num_queries()
 
         # Initialize residual
-        self.update_r()
+        self.r = self.b - self.A @ self.x  # track actual residual for comparison purposes
+        self.r_iter = self.r.copy()        # residual vector maintained throughout CG
         self.update_rnorms()
         # Initialize iterates
         self.z = self.precinv(self.r)
@@ -210,11 +211,11 @@ class PCG():
         self.d = 1/(self.S**2 + self.lamb) - 1/self.lamb
         self.precinv = lambda x: self.U @ (self.d * (self.U.T @ x)) + x/self.lamb
         # Initialize iterates
-        self.z = self.precinv(self.r)
+        self.z = self.precinv(self.r_iter)
         self.p = self.z
 
         te = timer()
-        self.update_times[-1] += (te - ts) # Update time taken for latest step
+        self.update_times[-1] += (te - ts)  # update time taken for latest step
 
     def update(self):
         ### Performs a single iteration of PCG
@@ -222,12 +223,12 @@ class PCG():
         qs = self.A.num_queries()
         
         self.v = self.A @ self.p
-        self.zr = np.dot(self.z, self.r)
+        self.zr = np.dot(self.z, self.r_iter)
         self.mu = self.zr / np.dot(self.p, self.v)
         self.x += self.mu * self.p
-        self.r -= self.mu * self.v
-        self.z = self.precinv(self.r) # preconditioner solve
-        self.tau = np.dot(self.z, self.r) / self.zr
+        self.r_iter -= self.mu * self.v
+        self.z = self.precinv(self.r_iter)  # preconditioner solve
+        self.tau = np.dot(self.z, self.r_iter) / self.zr
         self.p = self.z + self.tau * self.p
 
         te = timer()
@@ -235,4 +236,6 @@ class PCG():
         self.update_times.append(te - ts)
         self.num_queries.append(qe - qs)
         self.n_iter += 1
+        # Update actual residual vector and corresponding norm for comparison purposes
+        self.update_r()
         self.update_rnorms()

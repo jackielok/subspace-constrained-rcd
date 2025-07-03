@@ -19,7 +19,7 @@ create_summary_data = True  # flag for whether summary dataset is created from i
 solver_id_list = ["PCG", "SCRCD", "SCRCD2"]
 color_list = ["tab:orange", "tab:blue", "blue"]
 label_list = ["PCG", "SCRCD (diag)", "SCRCD (unif)"]
-linestyle_list = ["solid", "solid", "solid"]
+linestyle_list = ["dashed", "solid", (0, (6, 1, 1, 1))]
 linewidth_list = [1.75, 1.75, 1.75]
 
 #################### Define functions ####################

@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 
+selected_dataset="simlowrank400"
+
+n_samples="100"
 samples_indices=($(seq 0 99))
-l_list_indices=($(seq 0 10))
 
 l_list="10 100 200 300 400 500 600 700 800 900 1000"
-selected_dataset="simlowrank400"
-n_samples="100"
+l_list_indices=($(seq 0 10))
 
 n="8192"
 d="500"

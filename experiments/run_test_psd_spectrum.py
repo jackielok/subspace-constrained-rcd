@@ -77,13 +77,17 @@ def run_test_psd_spectrum(
     
     # Original matrix
     # Compute top eigenvalues only
-    A_evals = sp.sparse.linalg.eigsh(A, k=top_eigvals, which="LM", return_eigenvectors=False)[::-1]
-    # A_evals = sp.linalg.eigh(A, eigvals_only=True, subset_by_index=[n-top_eigvals, n-1])[::-1]
+    if top_eigvals < n:
+        A_evals = sp.sparse.linalg.eigsh(A, k=top_eigvals, which="LM", return_eigenvectors=False)[::-1]
+    else:
+        A_evals = sp.linalg.eigh(A, eigvals_only=True)[::-1]
     
     # Residual matrix (SCRCD)
     Ares = A - F @ F.T
-    Ares_evals = sp.sparse.linalg.eigsh(Ares, k=top_eigvals, which="LM", return_eigenvectors=False)
-    # Ares_evals = sp.linalg.eigh(Ares, eigvals_only=True, subset_by_index=[n-top_eigvals, n-1])
+    if top_eigvals < n:
+        Ares_evals = sp.sparse.linalg.eigsh(Ares, k=top_eigvals, which="LM", return_eigenvectors=False)
+    else:
+        Ares_evals = sp.linalg.eigh(Ares, eigvals_only=True)
     # Filter eigenvalues that are zero up to machine tolerance
     Ares_evals[Ares_evals < 100 * np.finfo(float).eps] = 0
     Ares_evals = Ares_evals[::-1]

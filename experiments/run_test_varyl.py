@@ -77,8 +77,9 @@ def run_test_varyl(
     print(f"Running RPCholesky: d = {d}...")
 
     ### Compute low-rank approximations
+    # Use the same random approximation in each sample
     # Low rank approximation for regularized kernel
-    Khat = rpcholesky(K + D, d, rng=rng)
+    Khat = rpcholesky(K + D, d, rng=rng, b=int(np.ceil(d / 10)))  # default: b = "auto" (outcome is random)
     I = Khat.get_indices()
     F = Khat.get_left_factor()
 

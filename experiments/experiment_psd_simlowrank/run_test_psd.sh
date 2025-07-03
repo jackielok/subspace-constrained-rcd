@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-samples_indices=($(seq 0 99))
-
 selected_dataset="simlowrank400"
+
 n_samples="100"
+samples_indices=($(seq 0 99))
 
 n="8192"
 r="400"
