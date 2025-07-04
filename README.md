@@ -36,7 +36,7 @@ The experiments can be performed by running the Python code located in the `/exp
 
 - The files `run_test.py`, `run_test_varyl.py`, `run_test_varyd.py`, `run_test_spectrum.py` are used for experiments solving kernel ridge regression (KRR) problems. In particular, implicit representation of the kernel matrix is supported, where entries of the input matrix can be directly evaluated from the input features as needed (i.e., it does not need to be entirely stored in memory).
 - The files `run_test_psd.py`, `run_test_psd_varyl.py`, `run_test_psd_varyd.py`, `run_test_psd_spectrum.py` are used for experiments solving general psd linear systems.
--  The Python files with the prefix `plot_` are used to plot the outputs of the corresponding test files.
+- The Python files with the prefix `plot_` are used to plot the outputs of the corresponding test files.
 
 **Example:**
 ```bash
@@ -57,8 +57,9 @@ $ bash run_test.sh
 
 Shell scripts to reproduce the experiments in the paper with the specific parameters used can be found in the following folders:
 - `/experiments/experiment_psd_simlowrank/`
-- `/experiments/experiment_krr_lhc/` 
+- `/experiments/experiment_krr_lhc/`
 - `/experiments/experiment_krr_sensorless/`
+- `/experiments/experiment_krr_app/`
 
 **Example:**
 ```bash
